@@ -1,0 +1,133 @@
+# ==============================================================================
+# RituGyan — Central System Configuration
+# Regime-Aware AI Post-Processing of Monsoon Rainfall Forecasts
+# ==============================================================================
+
+system:
+  project_name: "RituGyan"
+  version: "0.1.0"
+  log_level: "INFO"
+  seed: 42
+
+# Spatial & Temporal Domain Specification
+domain:
+  region_name: "India"
+  lat_min: 6.0
+  lat_max: 38.0
+  lon_min: 68.0
+  lon_max: 98.0
+  grid_resolution: 0.25  # degrees (~27 km at equator)
+  temporal_accumulation_window_hours: 24
+  observation_cycle_utc_hour: 3  # 03:00 UTC corresponds to 08:30 IST
+
+# IMD Categorical Rainfall Thresholds (mm/day)
+rainfall_thresholds:
+  trace_cutoff: 0.1
+  light_lower: 2.5
+  moderate_lower: 15.6
+  heavy: 64.5
+  very_heavy: 115.6
+  extremely_heavy: 204.5
+  categories:
+    no_rain: [0.0, 0.1]
+    very_light: [0.1, 2.4]
+    light: [2.5, 15.5]
+    moderate: [15.6, 64.4]
+    heavy: [64.5, 115.5]
+    very_heavy: [115.6, 204.4]
+    extremely_heavy: [204.5, 1500.0]
+
+# IMD District Color-Coded Alert Definitions
+alert_levels:
+  green:
+    name: "GREEN"
+    action: "No warning"
+    description: "No severe weather expected"
+  yellow:
+    name: "YELLOW"
+    action: "Be updated"
+    description: "Moderate rainfall or heavy rain probability between 0.30 and 0.59"
+    prob_heavy_threshold: 0.30
+  orange:
+    name: "ORANGE"
+    action: "Be prepared"
+    description: "Heavy to very heavy rainfall expected or P(Heavy) >= 0.60 or P(Very Heavy) >= 0.30"
+    prob_heavy_threshold: 0.60
+    prob_very_heavy_threshold: 0.30
+  red:
+    name: "RED"
+    action: "Take action"
+    description: "Extremely heavy rainfall expected or P(Very Heavy) >= 0.60 or P(Extremely Heavy) >= 0.30"
+    prob_very_heavy_threshold: 0.60
+    prob_extremely_heavy_threshold: 0.30
+
+# Synoptic & Meteorological Regime Catalog
+regimes:
+  active_monsoon:
+    id: 0
+    code: "ACTIVE_MONSOON"
+    name: "Active Monsoon"
+    description: "Strong cross-equatorial flow, LLJ at 850 hPa > 30 kt, trough south of normal"
+  break_monsoon:
+    id: 1
+    code: "BREAK_MONSOON"
+    name: "Break Monsoon"
+    description: "Monsoon trough shifted to Himalayan foothills, rainfall suppressed over Central India"
+  monsoon_depression:
+    id: 2
+    code: "MONSOON_DEPRESSION"
+    name: "Monsoon Low / Depression"
+    description: "Closed cyclonic circulation, low pressure departure < -2 hPa, heavy organized rainbands"
+  orographic_monsoon:
+    id: 3
+    code: "OROGRAPHIC_MONSOON"
+    name: "Orographic Monsoon"
+    description: "Heavy moisture flux intercepting Western Ghats / Meghalaya plateau terrain"
+  coastal_regime:
+    id: 4
+    code: "COASTAL_REGIME"
+    name: "Coastal Regime"
+    description: "Localized convergence driven by thermal and frictional land-sea boundaries"
+  western_disturbance:
+    id: 5
+    code: "WESTERN_DISTURBANCE"
+    name: "Western Disturbance"
+    description: "Mid-latitude upper-tropospheric westerly trough propagating across Northwest India"
+
+# Model Inference & Bias Correction Parameters
+model_params:
+  min_regime_confidence: 0.60
+  max_physical_rain_limit_mm: 1000.0
+  soft_blending_enabled: true
+  focal_loss_gamma: 2.0
+  focal_loss_alpha: 0.25
+  quantiles: [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]
+  stage1_model_type: "lightgbm"
+  stage2_model_type: "lightgbm"
+
+# Data Storage & Directory Layout
+paths:
+  data_raw_dir: "data/raw"
+  data_processed_dir: "data/processed"
+  data_shapefiles_dir: "data/shapefiles"
+  data_static_dir: "data/static"
+  models_dir: "models/saved"
+  notebooks_dir: "notebooks"
+  logs_dir: "logs"
+
+# API & Serving Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  title: "RituGyan AI Forecast API"
+  version: "0.1.0"
+  cors_origins: ["*"]
+
+# Web Dashboard UI Configuration (HTML/CSS/JS or React)
+ui:
+  port: 3000
+  theme: "dark"
+  default_lat: 20.5937
+  default_lon: 78.9629
+  default_zoom: 5
+  api_base_url: "http://localhost:8000/api/v1"
