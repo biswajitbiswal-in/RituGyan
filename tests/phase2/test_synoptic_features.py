@@ -198,6 +198,10 @@ class TestSynopticFeatures:
         assert 0.0 <= res.value <= 1.0
         assert np.isfinite(res.metadata["depression_mslp_anomaly_hpa"])
         assert np.isfinite(res.metadata["depression_max_vorticity_s1"])
+        assert np.isfinite(res.metadata["depression_pressure_contrast_hpa"])
+        assert 0.0 <= res.metadata["depression_vorticity_area_fraction"] <= 1.0
+        assert 0.0 <= res.metadata["depression_vorticity_convergence_area_fraction"] <= 1.0
+        assert res.value == float(res.metadata["depression_candidate_a_event"])
 
     def test_orographic_and_western_disturbance_indices(self, synthetic_synoptic_grid):
         """Verify Western Ghats orographic flux and Northwest activity indices."""

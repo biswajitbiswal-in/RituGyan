@@ -11,6 +11,8 @@ pyarrow>=12.0.0
 
 # Multidimensional Grids & Meteorological I/O
 xarray>=2023.6.0
+eccodes>=2.39.0
+ecmwflibs>=0.7.1
 netCDF4>=1.6.0
 h5netcdf>=1.2.0
 zarr>=2.16.0

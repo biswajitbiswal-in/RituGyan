@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import datetime
 import glob
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from src.ingestion.readers import setup_eccodes_environment
@@ -147,12 +148,31 @@ def load_era5_in_window_predictors(
     dt_d = datetime.date.fromisoformat(target_date)
     dt_next = dt_d + datetime.timedelta(days=1)
 
-    era5_timestamps = [
+    era5_timestamps_wanted = [
         f"{dt_d.isoformat()}T06:00:00",
         f"{dt_d.isoformat()}T12:00:00",
         f"{dt_d.isoformat()}T18:00:00",
         f"{dt_next.isoformat()}T00:00:00",
     ]
+
+    # Filter to timestamps actually present in the file.
+    # The ERA5 archive only covers JJAS (Jun–Sep), so the D+1 00:00Z timestamp
+    # (Oct 01 00:00 UTC) is absent for Sep 30.  Averaging over the 3 available
+    # in-window snapshots (06:00, 12:00, 18:00) on the target day is an
+    # equivalent and scientifically sound fallback for a daily-mean predictor.
+    available_times = set(pd.Timestamp(t).isoformat() for t in ds[time_coord].values)
+    era5_timestamps = [ts for ts in era5_timestamps_wanted if ts in available_times]
+    if not era5_timestamps:
+        raise KeyError(
+            f"No ERA5 timestamps found in file for target_date={target_date!r}. "
+            f"Wanted: {era5_timestamps_wanted}"
+        )
+    if len(era5_timestamps) < len(era5_timestamps_wanted):
+        missing = set(era5_timestamps_wanted) - set(era5_timestamps)
+        logger.debug(
+            f"ERA5 boundary fallback for {target_date}: {missing} not in file; "
+            f"averaging over {len(era5_timestamps)} available snapshots."
+        )
 
     # Slice time window and canonical subgrid
     window_ds = ds.sel({time_coord: era5_timestamps})

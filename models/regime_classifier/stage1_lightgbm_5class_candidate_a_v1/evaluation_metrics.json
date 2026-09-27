@@ -1,0 +1,257 @@
+{
+  "train": {
+    "sample_count": 243,
+    "accuracy": 1.0,
+    "balanced_accuracy": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "macro_f1": 1.0,
+    "weighted_f1": 1.0,
+    "confusion_matrix": [
+      [
+        17,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        151,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        35,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        32,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        8
+      ]
+    ],
+    "class_order": [
+      "ACTIVE_MONSOON",
+      "BREAK_MONSOON",
+      "MONSOON_DEPRESSION",
+      "OROGRAPHIC_MONSOON",
+      "COASTAL_REGIME"
+    ],
+    "per_class": {
+      "ACTIVE_MONSOON": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 17
+      },
+      "BREAK_MONSOON": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 151
+      },
+      "MONSOON_DEPRESSION": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 35
+      },
+      "OROGRAPHIC_MONSOON": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 32
+      },
+      "COASTAL_REGIME": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      }
+    }
+  },
+  "validation": {
+    "sample_count": 119,
+    "accuracy": 0.865546218487395,
+    "balanced_accuracy": 0.6752439024390243,
+    "macro_precision": 0.596181109339004,
+    "macro_recall": 0.6752439024390243,
+    "macro_f1": 0.6299559345856521,
+    "weighted_f1": 0.8484159642318058,
+    "confusion_matrix": [
+      [
+        7,
+        0,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        78,
+        3,
+        1,
+        0
+      ],
+      [
+        0,
+        2,
+        12,
+        1,
+        0
+      ],
+      [
+        0,
+        1,
+        1,
+        6,
+        0
+      ],
+      [
+        4,
+        0,
+        2,
+        0,
+        0
+      ]
+    ],
+    "class_order": [
+      "ACTIVE_MONSOON",
+      "BREAK_MONSOON",
+      "MONSOON_DEPRESSION",
+      "OROGRAPHIC_MONSOON",
+      "COASTAL_REGIME"
+    ],
+    "per_class": {
+      "ACTIVE_MONSOON": {
+        "precision": 0.6363636363636364,
+        "recall": 0.875,
+        "f1": 0.7368421052631579,
+        "support": 8
+      },
+      "BREAK_MONSOON": {
+        "precision": 0.9629629629629629,
+        "recall": 0.9512195121951219,
+        "f1": 0.9570552147239264,
+        "support": 82
+      },
+      "MONSOON_DEPRESSION": {
+        "precision": 0.631578947368421,
+        "recall": 0.8,
+        "f1": 0.7058823529411765,
+        "support": 15
+      },
+      "OROGRAPHIC_MONSOON": {
+        "precision": 0.75,
+        "recall": 0.75,
+        "f1": 0.75,
+        "support": 8
+      },
+      "COASTAL_REGIME": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 6
+      }
+    }
+  },
+  "test": {
+    "sample_count": 122,
+    "accuracy": 0.819672131147541,
+    "balanced_accuracy": 0.6050791420654434,
+    "macro_precision": 0.599047619047619,
+    "macro_recall": 0.6050791420654434,
+    "macro_f1": 0.6004705639188398,
+    "weighted_f1": 0.816653245002595,
+    "confusion_matrix": [
+      [
+        4,
+        0,
+        1,
+        2,
+        0
+      ],
+      [
+        0,
+        66,
+        6,
+        0,
+        1
+      ],
+      [
+        1,
+        6,
+        19,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        11,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        1,
+        0
+      ]
+    ],
+    "class_order": [
+      "ACTIVE_MONSOON",
+      "BREAK_MONSOON",
+      "MONSOON_DEPRESSION",
+      "OROGRAPHIC_MONSOON",
+      "COASTAL_REGIME"
+    ],
+    "per_class": {
+      "ACTIVE_MONSOON": {
+        "precision": 0.6666666666666666,
+        "recall": 0.5714285714285714,
+        "f1": 0.6153846153846154,
+        "support": 7
+      },
+      "BREAK_MONSOON": {
+        "precision": 0.9166666666666666,
+        "recall": 0.9041095890410958,
+        "f1": 0.9103448275862069,
+        "support": 73
+      },
+      "MONSOON_DEPRESSION": {
+        "precision": 0.6785714285714286,
+        "recall": 0.7037037037037037,
+        "f1": 0.6909090909090909,
+        "support": 27
+      },
+      "OROGRAPHIC_MONSOON": {
+        "precision": 0.7333333333333333,
+        "recall": 0.8461538461538461,
+        "f1": 0.7857142857142857,
+        "support": 13
+      },
+      "COASTAL_REGIME": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 2
+      }
+    }
+  }
+}

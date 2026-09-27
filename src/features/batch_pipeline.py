@@ -228,9 +228,14 @@ class MultiYearDatasetBuilder:
             )
 
             # 3. Classify synoptic regime
+            # NOTE: rainfall_field=None is intentional — same-day observed IMD rainfall
+            # (sample.target) must NOT be passed here.  It is the supervised target for
+            # Stage 2 bias correction and would constitute target leakage if used to
+            # generate Stage 1 regime labels.  The classifier operates purely on
+            # synoptic atmospheric indices derived from ERA5/GFS predictors.
             regime_res = self.regime_classifier.classify(
                 synoptic_feats=syn_feats,
-                rainfall_field=sample.target,
+                rainfall_field=None,
                 valid_mask=sample.valid_mask,
                 lats=sample.lats,
                 lons=sample.lons,

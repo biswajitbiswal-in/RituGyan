@@ -22,6 +22,17 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
+# ── Pre-load pyarrow DLL at import time, before tensor data fills RAM ─────────
+# On Windows, pyarrow._parquet.pyd fails to load once address space is
+# fragmented by hundreds of MB of NumPy arrays.  Importing here guarantees
+# the DLL is resident long before FeatureStore.save() is invoked.
+try:
+    import pyarrow  # noqa: F401
+    import pyarrow.parquet  # noqa: F401
+except ImportError:
+    pass  # pandas will fall back to fastparquet if available
+
+
 from src.features.preprocessing import (
     CHANNEL_UNITS,
     FEATURE_CHANNELS,
@@ -232,19 +243,36 @@ class FeatureStore:
 
     def get_temporal_split(
         self,
-        train_years: List[int] = [2020, 2021, 2022, 2023],
+        train_years: List[int] = [2021, 2022],
+        val_years: List[int] = [2023],
         test_years: List[int] = [2024],
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Partition metadata into temporal Train and Test splits without spatial/temporal leakage.
-        
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """Partition metadata into chronological Train / Validation / Test splits.
+
+        Strict chronological ordering prevents any temporal data leakage:
+          - Training years feed model fitting.
+          - Validation year provides a held-out signal for early stopping
+            and hyperparameter tuning without touching the test year.
+          - Test year (2024) is held entirely out until final evaluation.
+
+        Default split:
+          Train      : 2021, 2022  (244 JJAS days)
+          Validation : 2023        (122 JJAS days)
+          Test       : 2024        (122 JJAS days)
+
+        Note: 2020 is excluded from defaults — GFS data for 2020 was not acquired.
+
         Args:
-            train_years: List of training years (e.g. 2020-2023).
-            test_years: List of testing years (e.g. 2024).
-            
+            train_years: List of training years. Default [2021, 2022].
+            val_years:   List of validation years. Default [2023].
+                         Pass [] to skip (returns empty DataFrame).
+            test_years:  List of test years. Default [2024].
+
         Returns:
-            Tuple of (train_df, test_df) metadata DataFrames.
+            Tuple of (train_df, val_df, test_df) metadata DataFrames.
         """
         df = self.load_metadata()
         train_df = df[df["year"].isin(train_years)].copy()
-        test_df = df[df["year"].isin(test_years)].copy()
-        return train_df, test_df
+        val_df   = df[df["year"].isin(val_years)].copy()   if val_years else df.iloc[0:0].copy()
+        test_df  = df[df["year"].isin(test_years)].copy()
+        return train_df, val_df, test_df

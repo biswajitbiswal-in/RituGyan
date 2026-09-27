@@ -29,16 +29,16 @@ class TestMultiYearDataset:
             assert audit.expected_days_per_year[yr] == 122
 
         # Verify IMD audit results
-        assert 2024 in audit.imd_available_years
-        assert audit.imd_available_years[2024] == 122  # Complete JJAS 2024 in RF25_ind2024_rfp25.nc
-        for yr in [2020, 2021, 2022, 2023]:
-            assert audit.imd_available_years[yr] == 0
+        for yr in [2021, 2022, 2023, 2024]:
+            assert yr in audit.imd_available_years
+            assert audit.imd_available_years[yr] == 122  # Complete JJAS in RF25_ind<yr>_rfp25.nc
+        assert audit.imd_available_years.get(2020, 0) == 0
 
         # Verify ERA5 audit results
-        assert 2024 in audit.era5_available_years
-        assert audit.era5_available_years[2024] == 122  # Complete JJAS 2024 in era5.nc
-        for yr in [2020, 2021, 2022, 2023]:
-            assert audit.era5_available_years[yr] == 0
+        for yr in [2021, 2022, 2023, 2024]:
+            assert yr in audit.era5_available_years
+            assert audit.era5_available_years[yr] == 122  # Complete JJAS in era5 files
+        assert audit.era5_available_years.get(2020, 0) == 0
 
         # Verify GFS audit results
         assert "2024-06-21" in audit.gfs_available_dates

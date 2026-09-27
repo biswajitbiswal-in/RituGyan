@@ -165,6 +165,12 @@ class SynopticRegimeClassifier:
             "mfc_central_india_mm_day": synoptic_feats.mfc_central_india_mean_mm_day,
             "depression_mslp_anomaly_hpa": synoptic_feats.depression_mslp_anomaly_hpa,
             "depression_max_vorticity_s1": synoptic_feats.depression_max_vorticity_s1,
+            "depression_pressure_contrast_hpa": synoptic_feats.depression_pressure_contrast_hpa,
+            "depression_vorticity_area_fraction": synoptic_feats.depression_vorticity_area_fraction,
+            "depression_vorticity_convergence_area_fraction": (
+                synoptic_feats.depression_vorticity_convergence_area_fraction
+            ),
+            "depression_candidate_a_event": synoptic_feats.depression_candidate_a_event,
             "orographic_ghats_zonal_flux": synoptic_feats.orographic_ghats_zonal_flux,
             "nw_india_min_mslp_hpa": synoptic_feats.nw_india_min_mslp_hpa,
             "nw_india_mean_pwat_mm": synoptic_feats.nw_india_mean_pwat_mm,
@@ -310,37 +316,24 @@ class SynopticRegimeClassifier:
         syn: SynopticFeatureSet,
         ev: Dict[str, Any],
     ) -> Tuple[float, List[str]]:
-        """Evaluate MONSOON_DEPRESSION (ID 2) rules."""
+        """Evaluate the Candidate A Category-A surface proxy for regime 2."""
         rules = []
-        
-        # A closed synoptic depression vortex strictly requires cyclonic vorticity
-        if syn.depression_max_vorticity_s1 < 1.8e-5:
-            return 0.0, rules
+        if syn.depression_candidate_a_event:
+            rules.extend([
+                f"Local pressure contrast: {syn.depression_pressure_contrast_hpa:.2f} hPa (<= -2.0 hPa)",
+                (
+                    "Cyclonic vorticity area fraction: "
+                    f"{syn.depression_vorticity_area_fraction:.3f} (>= 0.10)"
+                ),
+                (
+                    "Vorticity with positive 10 m convergence area fraction: "
+                    f"{syn.depression_vorticity_convergence_area_fraction:.3f} (>= 0.05)"
+                ),
+                "Candidate A Category-A 10 m surface proxy; not validated depression detection",
+            ])
+            return 1.0, rules
 
-        score = 0.0
-
-        # Criterion A: Negative MSLP anomaly in depression track
-        if syn.depression_mslp_anomaly_hpa <= -2.5:
-            rules.append(f"Deep MSLP anomaly: {syn.depression_mslp_anomaly_hpa:.1f} hPa (<= -2.5 hPa)")
-            score += 0.40 + min(0.30, abs(syn.depression_mslp_anomaly_hpa + 2.5) * 0.10)
-        elif syn.depression_mslp_anomaly_hpa <= -1.5:
-            rules.append(f"Moderate MSLP anomaly: {syn.depression_mslp_anomaly_hpa:.1f} hPa (<= -1.5 hPa)")
-            score += 0.25
-
-        # Criterion B: Cyclonic relative vorticity
-        if syn.depression_max_vorticity_s1 >= 2.5e-5:
-            rules.append(f"Strong cyclonic vorticity: {syn.depression_max_vorticity_s1:.2e} s^-1 (>= 2.5e-5)")
-            score += 0.35
-        elif syn.depression_max_vorticity_s1 >= 1.8e-5:
-            rules.append(f"Moderate cyclonic vorticity: {syn.depression_max_vorticity_s1:.2e} s^-1 (>= 1.8e-5)")
-            score += 0.20
-
-        # Criterion C: Central pressure absolute threshold
-        if syn.depression_min_mslp_hpa < 996.0:
-            rules.append(f"Low central pressure: {syn.depression_min_mslp_hpa:.1f} hPa (< 996 hPa)")
-            score += 0.15
-
-        return min(1.0, score), rules
+        return 0.0, rules
 
     def _evaluate_break_monsoon(
         self,
@@ -370,8 +363,8 @@ class SynopticRegimeClassifier:
                 rules.append(f"Foothills rain ({ev['foothills_rain_fraction']:.2f}) exceeds Central India ({ev['central_india_rain_fraction']:.2f})")
                 score += 0.20
 
-        # Disqualification if depression is active
-        if syn.depression_mslp_anomaly_hpa <= -3.0 and syn.depression_max_vorticity_s1 >= 2.5e-5:
+        # Penalize only when the Candidate A surface proxy event is present.
+        if syn.depression_candidate_a_event:
             score = max(0.0, score - 0.50)
 
         return min(1.0, score), rules
@@ -406,8 +399,8 @@ class SynopticRegimeClassifier:
             rules.append(f"Strong low-latitude inflow: {syn.low_latitude_inflow_speed_ms:.1f} m/s (>= 8.0)")
             score += 0.15
 
-        # Disqualification if deep depression
-        if syn.depression_mslp_anomaly_hpa <= -3.5 and syn.depression_max_vorticity_s1 >= 2.0e-5:
+        # Penalize only when the Candidate A surface proxy event is present.
+        if syn.depression_candidate_a_event:
             score = max(0.0, score - 0.40)
 
         return min(1.0, score), rules

@@ -1,0 +1,73 @@
+{
+  "model": "LightGBM multiclass",
+  "objective": "multiclass",
+  "num_classes": 5,
+  "class_mapping": {
+    "0": "ACTIVE_MONSOON",
+    "1": "BREAK_MONSOON",
+    "2": "MONSOON_DEPRESSION",
+    "3": "OROGRAPHIC_MONSOON",
+    "4": "COASTAL_REGIME"
+  },
+  "western_disturbance_policy": "WESTERN_DISTURBANCE is not an ML-trained class because the available dataset contains only 4 total samples and zero 2024 test samples. It remains a documented rule-based/fallback regime.",
+  "western_disturbance_excluded_by_split": {
+    "train": 1,
+    "validation": 3,
+    "test": 0
+  },
+  "feature_representation": "Area-weighted means for 15 predictor channels over seven fixed regions, concatenated with the 17 stored synoptic scalars. Target rainfall and valid-land mask are not read.",
+  "feature_count": 122,
+  "feature_names_file": "feature_names.json",
+  "random_seed": 42,
+  "training_class_weights": {
+    "ACTIVE_MONSOON": 2.8588235294117648,
+    "BREAK_MONSOON": 0.3218543046357616,
+    "MONSOON_DEPRESSION": 1.3885714285714286,
+    "OROGRAPHIC_MONSOON": 1.51875,
+    "COASTAL_REGIME": 6.075
+  },
+  "sample_counts_after_western_disturbance_exclusion": {
+    "train": 243,
+    "validation": 119,
+    "test": 122
+  },
+  "temporal_ranges": {
+    "train": {
+      "start": "2021-06-01",
+      "end": "2022-09-30"
+    },
+    "validation": {
+      "start": "2023-06-01",
+      "end": "2023-09-30"
+    },
+    "test": {
+      "start": "2024-06-01",
+      "end": "2024-09-30"
+    }
+  },
+  "best_iteration": 87,
+  "training_seed_and_parameters": {
+    "objective": "multiclass",
+    "num_class": 5,
+    "metric": "multi_logloss",
+    "learning_rate": 0.03,
+    "num_leaves": 7,
+    "max_depth": 4,
+    "min_data_in_leaf": 8,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 1.0,
+    "verbosity": -1,
+    "seed": 42,
+    "deterministic": true,
+    "force_col_wise": true,
+    "num_threads": 1
+  },
+  "software_versions": {
+    "python": "3.14.6",
+    "lightgbm": "4.7.0",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "scikit_learn": "1.9.1"
+  },
+  "created_at_utc": "2026-09-27T14:57:56.034103+00:00"
+}

@@ -38,6 +38,11 @@ EARTH_RADIUS_M = 6371000.0
 # Climatological normal monsoon trough latitude (mean across 72°E - 86°E)
 CLIMATOLOGICAL_TROUGH_LAT_NORMAL = 22.5  # degrees North
 
+DEPRESSION_PRESSURE_CONTRAST_THRESHOLD_HPA = -2.0
+DEPRESSION_VORTICITY_THRESHOLD_S1 = 2.5e-5
+DEPRESSION_VORTICITY_AREA_FRACTION_MIN = 0.10
+DEPRESSION_VORTICITY_CONVERGENCE_AREA_FRACTION_MIN = 0.05
+
 
 class IndexCategory(str, Enum):
     """Classification of meteorological index data availability."""
@@ -104,6 +109,12 @@ class SynopticFeatureSet:
     # Broad Domain Moisture State
     domain_mean_pwat_mm: float                   # [mm / kg/m^2]
     domain_mean_mslp_hpa: float                  # [hPa]
+
+    # Candidate A Category-A surface depression proxy diagnostics
+    depression_pressure_contrast_hpa: Optional[float] = None
+    depression_vorticity_area_fraction: Optional[float] = None
+    depression_vorticity_convergence_area_fraction: Optional[float] = None
+    depression_candidate_a_event: bool = False
     
     # Index Classification Catalog
     feature_catalog: Dict[str, SynopticIndexResult] = field(default_factory=dict)
@@ -429,6 +440,26 @@ def compute_relative_vorticity_2d(
     return np.nan_to_num(zeta, nan=0.0).astype(np.float32)
 
 
+def compute_horizontal_convergence_2d(
+    u10_ms: np.ndarray,
+    v10_ms: np.ndarray,
+    lats: np.ndarray = CANONICAL_LATS,
+    lons: np.ndarray = CANONICAL_LONS,
+) -> np.ndarray:
+    """Compute positive horizontal convergence from 10 m winds on a sphere [s^-1]."""
+    lat_rad = np.deg2rad(lats)
+    lon_rad = np.deg2rad(lons)
+    cos_lat = np.cos(lat_rad)[:, np.newaxis]
+    cos_lat_safe = np.maximum(cos_lat, 1e-4)
+
+    dlat_rad = np.gradient(lat_rad)
+    dlon_rad = np.gradient(lon_rad)
+    du_dlon = np.gradient(u10_ms, axis=1) / dlon_rad[np.newaxis, :]
+    dvc_dlat = np.gradient(v10_ms * cos_lat, axis=0) / dlat_rad[:, np.newaxis]
+    divergence = (du_dlon + dvc_dlat) / (EARTH_RADIUS_M * cos_lat_safe)
+    return np.nan_to_num(-divergence, nan=0.0).astype(np.float32)
+
+
 def compute_monsoon_depression_index(
     mslp_hpa: np.ndarray,
     u10_ms: np.ndarray,
@@ -438,14 +469,11 @@ def compute_monsoon_depression_index(
     lat_bounds: Tuple[float, float] = (16.0, 24.0),
     lon_bounds: Tuple[float, float] = (76.0, 90.0),
 ) -> SynopticIndexResult:
-    """Evaluate Monsoon Low / Depression signature in Central India & Bay of Bengal.
-    
-    Criteria:
-      - Marked negative MSLP anomaly (relative to domain mean or background pressure).
-      - Localized cyclonic relative vorticity maximum (zeta > 1.5e-5 s^-1).
-      - Domain: 16°N-24°N, 76°E-90°E (Core Monsoon Low / Depression track).
-      
-    Classification: Category A (Directly computable from MSLP and 10m wind fields).
+    """Evaluate a Category-A 10 m surface proxy for a monsoon depression.
+
+    Candidate A requires a local pressure contrast plus spatially coherent 10 m
+    cyclonic vorticity and convergence in the core track. It is not a validated
+    meteorological depression detector and does not infer pressure-level flow.
     """
     domain_mean_mslp = float(np.mean(mslp_hpa))
 
@@ -455,29 +483,73 @@ def compute_monsoon_depression_index(
     sub_mslp = mslp_hpa[np.ix_(lat_mask, lon_mask)]
     min_mslp = float(np.min(sub_mslp))
     mslp_anomaly = float(min_mslp - domain_mean_mslp)
+    min_row, min_col = np.unravel_index(np.argmin(sub_mslp), sub_mslp.shape)
+    center_lat = float(lats[lat_mask][min_row])
+    center_lon = float(lons[lon_mask][min_col])
 
-    # Relative vorticity across the domain
+    lat_radians = np.deg2rad(lats[:, np.newaxis])
+    center_lat_radians = np.deg2rad(center_lat)
+    delta_lat = lat_radians - center_lat_radians
+    delta_lon = np.deg2rad(lons[np.newaxis, :] - center_lon)
+    haversine = (
+        np.sin(delta_lat / 2.0) ** 2
+        + np.cos(lat_radians) * np.cos(center_lat_radians) * np.sin(delta_lon / 2.0) ** 2
+    )
+    distance_degrees = np.rad2deg(2.0 * np.arcsin(np.sqrt(np.clip(haversine, 0.0, 1.0))))
+    inner_mask = distance_degrees <= 1.0
+    annulus_mask = (distance_degrees >= 2.0) & (distance_degrees <= 4.0)
+    area_weights = np.broadcast_to(np.cos(lat_radians), mslp_hpa.shape)
+
+    def weighted_mean(field: np.ndarray, mask: np.ndarray) -> float:
+        valid = mask & np.isfinite(field)
+        if not np.any(valid):
+            raise ValueError("Depression pressure region contains no finite grid cells")
+        return float(np.sum(field[valid] * area_weights[valid]) / np.sum(area_weights[valid]))
+
+    inner_mean_mslp = weighted_mean(mslp_hpa, inner_mask)
+    annulus_mean_mslp = weighted_mean(mslp_hpa, annulus_mask)
+    pressure_contrast = inner_mean_mslp - annulus_mean_mslp
+
+    # Spatially aggregated cyclonic vorticity and co-located wind convergence.
     zeta = compute_relative_vorticity_2d(u10_ms, v10_ms, lats=lats, lons=lons)
     sub_zeta = zeta[np.ix_(lat_mask, lon_mask)]
     max_vorticity = float(np.max(sub_zeta))
+    convergence = compute_horizontal_convergence_2d(u10_ms, v10_ms, lats=lats, lons=lons)
+    sub_convergence = convergence[np.ix_(lat_mask, lon_mask)]
+    box_weights = area_weights[np.ix_(lat_mask, lon_mask)]
+    total_box_area = float(np.sum(box_weights))
+    cyclonic_mask = sub_zeta >= DEPRESSION_VORTICITY_THRESHOLD_S1
+    vorticity_area_fraction = float(np.sum(box_weights * cyclonic_mask) / total_box_area)
+    joint_area_fraction = float(
+        np.sum(box_weights * (cyclonic_mask & (sub_convergence > 0.0))) / total_box_area
+    )
 
-    # Depression detection score (0 to 1)
-    # Deeper pressure anomaly and positive cyclonic vorticity increase score
-    score = 0.0
-    if mslp_anomaly < -2.0:
-        score += min(0.5, abs(mslp_anomaly + 2.0) * 0.1)
-    if max_vorticity > 1.5e-5:
-        score += min(0.5, (max_vorticity - 1.5e-5) / 2.0e-5 * 0.5)
-
-    score = float(np.clip(score, 0.0, 1.0))
+    pressure_condition = pressure_contrast <= DEPRESSION_PRESSURE_CONTRAST_THRESHOLD_HPA
+    circulation_condition = (
+        vorticity_area_fraction >= DEPRESSION_VORTICITY_AREA_FRACTION_MIN
+        and joint_area_fraction >= DEPRESSION_VORTICITY_CONVERGENCE_AREA_FRACTION_MIN
+    )
+    candidate_a_event = pressure_condition and circulation_condition
+    score = 1.0 if candidate_a_event else 0.0
 
     metadata = {
         "depression_min_mslp_hpa": min_mslp,
+        "depression_inner_mean_mslp_hpa": inner_mean_mslp,
+        "depression_annulus_mean_mslp_hpa": annulus_mean_mslp,
+        "depression_pressure_contrast_hpa": pressure_contrast,
         "depression_mslp_anomaly_hpa": mslp_anomaly,
         "depression_max_vorticity_s1": max_vorticity,
+        "depression_vorticity_area_fraction": vorticity_area_fraction,
+        "depression_vorticity_convergence_area_fraction": joint_area_fraction,
+        "depression_candidate_a_event": candidate_a_event,
         "depression_score": score,
         "search_bounds_lat": list(lat_bounds),
         "search_bounds_lon": list(lon_bounds),
+        "pressure_contrast_threshold_hpa": DEPRESSION_PRESSURE_CONTRAST_THRESHOLD_HPA,
+        "vorticity_threshold_s1": DEPRESSION_VORTICITY_THRESHOLD_S1,
+        "vorticity_area_fraction_min": DEPRESSION_VORTICITY_AREA_FRACTION_MIN,
+        "vorticity_convergence_area_fraction_min": DEPRESSION_VORTICITY_CONVERGENCE_AREA_FRACTION_MIN,
+        "proxy_classification": "Category-A 10 m surface proxy; not validated depression detection",
     }
 
     return SynopticIndexResult(
@@ -645,6 +717,12 @@ def extract_all_synoptic_features(
         nw_india_mean_pwat_mm=wd_res.value,
         domain_mean_pwat_mm=domain_mean_pwat,
         domain_mean_mslp_hpa=domain_mean_mslp,
+        depression_pressure_contrast_hpa=dep_res.metadata["depression_pressure_contrast_hpa"],
+        depression_vorticity_area_fraction=dep_res.metadata["depression_vorticity_area_fraction"],
+        depression_vorticity_convergence_area_fraction=dep_res.metadata[
+            "depression_vorticity_convergence_area_fraction"
+        ],
+        depression_candidate_a_event=dep_res.metadata["depression_candidate_a_event"],
         feature_catalog=catalog,
         metadata={"total_indices_evaluated": len(catalog)},
     )

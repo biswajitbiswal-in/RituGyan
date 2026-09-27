@@ -131,6 +131,7 @@ class TestSynopticRegimeClassifier:
     ):
         """Verify that representative meteorological patterns trigger each respective regime."""
         feats, rain, mask = create_mock_synoptic_scenario(scenario)
+        # Synthetic fixture rainfall exercises optional rules; operational paths use None.
         result = classifier.classify(feats, rainfall_field=rain, valid_mask=mask)
 
         assert isinstance(result, RegimeClassificationResult)
@@ -181,14 +182,12 @@ class TestSynopticRegimeClassifier:
         """Verify regime classification on real ingested sample date 2024-06-21."""
         era5_path = Path("data/raw/era5.nc")
         gfs_dir = Path("data/raw/gfs_exact_test")
-        imd_path = Path("data/raw/RF25_ind2024_rfp25.nc")
 
-        if not (era5_path.exists() and gfs_dir.exists() and imd_path.exists()):
+        if not (era5_path.exists() and gfs_dir.exists()):
             pytest.skip("Test datasets not available")
 
-        # Load predictors & IMD target
+        # Load predictors only; observed IMD rainfall must not determine regime labels.
         era5_feats = load_era5_in_window_predictors(era5_path, target_date="2024-06-21")
-        imd_rain, valid_mask = load_imd_target_day(imd_path, target_date="2024-06-21")
 
         syn_feats = extract_all_synoptic_features(
             mslp_hpa=era5_feats["era5_msl_mean"],
@@ -198,7 +197,7 @@ class TestSynopticRegimeClassifier:
             target_date="2024-06-21",
         )
 
-        result = classifier.classify(syn_feats, rainfall_field=imd_rain, valid_mask=valid_mask)
+        result = classifier.classify(syn_feats, rainfall_field=None)
 
         assert 0 <= result.regime_id <= 5
         assert result.regime_code in [r.code for r in REGIME_CATALOG.values()]

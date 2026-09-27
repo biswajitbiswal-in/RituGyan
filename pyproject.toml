@@ -31,6 +31,8 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "pyyaml>=6.0.1",
     "rich>=13.6.0",
+    "eccodes>=2.39.0",
+    "ecmwflibs>=0.7.1",
 ]
 
 [project.optional-dependencies]

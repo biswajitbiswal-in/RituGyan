@@ -76,9 +76,11 @@ class TestFeatureStore:
         )
 
         classifier = SynopticRegimeClassifier()
+        # rainfall_field=None: mirrors the leak-free batch pipeline convention;
+        # the IMD target is the supervised label, not a classifier input.
         regime_res = classifier.classify(
             synoptic_feats=syn_feats,
-            rainfall_field=sample.target,
+            rainfall_field=None,
             valid_mask=sample.valid_mask,
         )
 
@@ -131,10 +133,9 @@ class TestFeatureStore:
         ds_tensors.close()
 
     def test_temporal_split_no_leakage(self, temp_store_dir):
-        """Verify that temporal partitioning strictly prevents train/test date overlap and leakage."""
-        # Create synthetic multi-year metadata DataFrame
+        """Verify three-way chronological Train/Val/Test split prevents any date overlap."""
+        # Synthetic multi-year metadata covering 2021-2024 (2020 excluded: data not acquired)
         records = [
-            {"date": "2020-07-15", "year": 2020, "regime_id": 0, "regime_code": "ACTIVE_MONSOON"},
             {"date": "2021-08-10", "year": 2021, "regime_id": 1, "regime_code": "BREAK_MONSOON"},
             {"date": "2022-06-25", "year": 2022, "regime_id": 2, "regime_code": "MONSOON_DEPRESSION"},
             {"date": "2023-07-04", "year": 2023, "regime_id": 3, "regime_code": "OROGRAPHIC_MONSOON"},
@@ -145,14 +146,29 @@ class TestFeatureStore:
         df_mock.to_parquet(meta_path, index=False)
 
         store = FeatureStore(temp_store_dir)
-        train_df, test_df = store.get_temporal_split(train_years=[2020, 2021, 2022, 2023], test_years=[2024])
+        # Default split: Train=2021-2022, Val=2023, Test=2024
+        train_df, val_df, test_df = store.get_temporal_split()
 
-        assert len(train_df) == 4
-        assert len(test_df) == 1
-        assert set(train_df["year"].unique()) == {2020, 2021, 2022, 2023}
+        assert len(train_df) == 2, f"Expected 2 train samples, got {len(train_df)}"
+        assert len(val_df) == 1, f"Expected 1 val sample, got {len(val_df)}"
+        assert len(test_df) == 1, f"Expected 1 test sample, got {len(test_df)}"
+
+        assert set(train_df["year"].unique()) == {2021, 2022}
+        assert set(val_df["year"].unique()) == {2023}
         assert set(test_df["year"].unique()) == {2024}
 
-        # Zero temporal leakage: Set intersection of dates must be empty
+        # Zero temporal leakage: no date may appear in more than one split
         train_dates = set(train_df["date"])
-        test_dates = set(test_df["date"])
-        assert len(train_dates.intersection(test_dates)) == 0
+        val_dates   = set(val_df["date"])
+        test_dates  = set(test_df["date"])
+        assert len(train_dates & val_dates) == 0, "Train and Val share dates"
+        assert len(train_dates & test_dates) == 0, "Train and Test share dates"
+        assert len(val_dates & test_dates) == 0, "Val and Test share dates"
+
+        # Explicit year args still work (backward-compatible)
+        tr2, v2, te2 = store.get_temporal_split(
+            train_years=[2021], val_years=[2022, 2023], test_years=[2024]
+        )
+        assert set(tr2["year"].unique()) == {2021}
+        assert set(v2["year"].unique()) == {2022, 2023}
+        assert set(te2["year"].unique()) == {2024}
