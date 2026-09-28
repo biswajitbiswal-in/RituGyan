@@ -1,0 +1,59 @@
+{
+  "baseline": "models\\regime_classifier\\stage1_lightgbm_5class_candidate_a_v1",
+  "operational_model": "models\\regime_classifier\\stage1_lightgbm_5class_operational_gfs_v1",
+  "note": "Same Candidate A proxy labels and chronological years, but separate predictor provenance. This is a descriptive comparison, not a controlled ablation or independent ground-truth evaluation.",
+  "splits": {
+    "validation": {
+      "baseline": {
+        "accuracy": 0.865546218487395,
+        "balanced_accuracy": 0.6752439024390243,
+        "macro_precision": 0.596181109339004,
+        "macro_recall": 0.6752439024390243,
+        "macro_f1": 0.6299559345856521,
+        "weighted_f1": 0.8484159642318058
+      },
+      "operational_gfs": {
+        "accuracy": 0.7815126050420168,
+        "balanced_accuracy": 0.49292682926829273,
+        "macro_precision": 0.4789413220219159,
+        "macro_recall": 0.49292682926829273,
+        "macro_f1": 0.47060625510561327,
+        "weighted_f1": 0.7641027702947207
+      },
+      "operational_minus_baseline": {
+        "accuracy": -0.08403361344537819,
+        "balanced_accuracy": -0.1823170731707316,
+        "macro_precision": -0.11723978731708812,
+        "macro_recall": -0.1823170731707316,
+        "macro_f1": -0.15934967948003886,
+        "weighted_f1": -0.08431319393708503
+      }
+    },
+    "test": {
+      "baseline": {
+        "accuracy": 0.819672131147541,
+        "balanced_accuracy": 0.6050791420654434,
+        "macro_precision": 0.599047619047619,
+        "macro_recall": 0.6050791420654434,
+        "macro_f1": 0.6004705639188398,
+        "weighted_f1": 0.816653245002595
+      },
+      "operational_gfs": {
+        "accuracy": 0.8114754098360656,
+        "balanced_accuracy": 0.6611230981093994,
+        "macro_precision": 0.645045045045045,
+        "macro_recall": 0.6611230981093994,
+        "macro_f1": 0.6491419093036344,
+        "weighted_f1": 0.810985903319428
+      },
+      "operational_minus_baseline": {
+        "accuracy": -0.008196721311475419,
+        "balanced_accuracy": 0.056043956043955956,
+        "macro_precision": 0.045997425997425956,
+        "macro_recall": 0.056043956043955956,
+        "macro_f1": 0.04867134538479456,
+        "weighted_f1": -0.00566734168316696
+      }
+    }
+  }
+}
