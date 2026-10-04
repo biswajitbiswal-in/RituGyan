@@ -31,7 +31,7 @@ NWP precipitation forecasts carry systematic biases, and those biases **change w
 
 ## Pipeline
 
-![RituGyan pipeline](gitgdiagram.png)
+![RituGyan pipeline](diagram.png)
 
 <details>
 <summary>Text version of the pipeline (with implementation status)</summary>
